@@ -48,4 +48,17 @@ jobs:
       - name: Update ECS Service
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: '{"family": "${{
+          task-definition: >
+            {
+              "family": "${{ env.ECS_SERVICE_NAME }}",
+              "containerDefinitions": [
+                {
+                  "name": "app1",
+                  "image": "${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.APP1_IMAGE_NAME }}:latest"
+                },
+                {
+                  "name": "app2",
+                  "image": "${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.APP2_IMAGE_NAME }}:latest"
+                }
+              ]
+            }
