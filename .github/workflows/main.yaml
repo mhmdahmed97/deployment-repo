@@ -1,0 +1,101 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: <your-aws-region>
+  AWS_ACCOUNT_ID: <your-aws-account-id>
+  APP1_IMAGE_NAME: <app1-image-name>
+  APP2_IMAGE_NAME: <app2-image-name>
+  ECS_CLUSTER_NAME: <your-ecs-cluster-name>
+  ECS_SERVICE_NAME: <your-ecs-service-name>
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push App1 Image
+        working-directory: ./<github-repo-1>
+        run: |
+          docker-compose build app1
+          docker tag app1 ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.APP1_IMAGE_NAME }}:latest
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.APP1_IMAGE_NAME }}:latest
+
+      - name: Build and Push App2 Image
+        working-directory: ./<github-repo-2>
+        run: |
+          docker-compose build app2
+          docker tag app2 ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.APP2_IMAGE_NAME }}:latest
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.APP2_IMAGE_NAME }}:latest
+
+      - name: Update ECS Service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: >
+            {
+              "family": "${{ env.ECS_SERVICE_NAME }}",
+              "containerDefinitions": [
+                {
+                  "name": "app1",
+                  "image": "${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.APP1_IMAGE_NAME }}:latest"
+                },
+                {
+                  "name": "app2",
+                  "image": "${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.APP2_IMAGE_NAME }}:latest"
+                }
+              ]
+            }
+  update-google-sheet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record deployment start time in Google Sheets
+        uses: google-github-actions/sheets@v4
+        with:
+          spreadsheet_id: ${{ env.SPREADSHEET_ID }}
+          range: 'Sheet1!A2'
+          value_input_option: 'RAW'
+          service_account_json: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          data: |
+            [[ "$(date -u '+%Y-%m-%d %H:%M:%S')" ]]
+
+      - name: Wait for Deployment to Complete
+        uses: aws-actions/wait-for-deployment-status@v1
+        with:
+          service: ${{ env.ECS_SERVICE_NAME }}
+          cluster: ${{ env.ECS_CLUSTER_NAME }}
+      
+      - name: Check deployment status
+        run: |
+          DEPLOYMENT_STATUS=$(aws ecs describe-services --services $ECS_SERVICE_NAME --cluster $ECS_CLUSTER_NAME --query 'services[0].deployments[0].status' --output text)
+          if [ "$DEPLOYMENT_STATUS" = "PRIMARY" ]; then
+            DEPLOYMENT_STATUS_TEXT="successful"
+          else
+            DEPLOYMENT_STATUS_TEXT="failed"
+          fi
+      
+      - name: Record deployment end time and status in Google Sheets
+        uses: google-github-actions/sheets@v4
+        with:
+          spreadsheet_id: ${{ env.SPREADSHEET_ID }}
+          range: 'Sheet1!B2'
+          value_input_option: 'RAW'
+          service_account_json: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          data: |
+            [[ "$(date -u '+%Y-%m-%d %H:%M:%S')", "${{ env.DEPLOYMENT_STATUS_TEXT }}" ]]

@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  app1:
+    build:
+      context: https://github.com/<username>/<github-repo-1>.git
+      dockerfile: Dockerfile
+    image: <your-aws-account-id>.dkr.ecr.<your-aws-region>.amazonaws.com/<app1-image-name>:latest
+    container_name: app1
+    ports:
+      - "3000:3000"
+  app2:
+    build:
+      context: https://github.com/<username>/<github-repo-2>.git
+      dockerfile: Dockerfile
+    image: <your-aws-account-id>.dkr.ecr.<your-aws-region>.amazonaws.com/<app2-image-name>:latest
+    container_name: app2
+    ports:
+      - "3001:3000"
