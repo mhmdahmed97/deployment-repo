@@ -1,6 +1,8 @@
 # Deployment-repo
 This repository consists of a docker-compose file that builds docker images from 2 different code repositories, then the CI/CD workflow comes into play where it builds and publishes images from the code repositories to ECR and then deploys the application on ECS
+
 `Assumption: both code repos are microservices of the same ECS cluster, thats why they are being deployed in the same cluster`
+
 # Consists of 2 files
   - docker-compose.yaml
   - .github/workflows/main.yaml
