@@ -62,7 +62,9 @@ jobs:
                 }
               ]
             }
-
+  update-google-sheet:
+    runs-on: ubuntu-latest
+    steps:
       - name: Record deployment start time in Google Sheets
         uses: google-github-actions/sheets@v4
         with:
