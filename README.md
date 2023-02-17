@@ -8,14 +8,15 @@ This repository consists of a docker-compose file that builds docker images from
 Builds docker images from 2 different code repositories.
   - `github-repo-1`
   - `github-repo-2`
+ 
 These repositories could be of any stack. We can also add relevant Database containers and make sure that the application containers indefinitely depend on database containers.
 
 # main.yaml
 This is the CI/CD workflow file and it consists of the following jobs, the jobs also have their steps mentioned.
   - Deploy
     - Code checkout
-    - Code build : `This stage is omitted from the code as there was no application to built`
-    - Code test : `This stage is omitted from the code as there was no application to built`
+    - Code build : `This stage is omitted from the code as there was no application to build`
+    - Code test : `This stage is omitted from the code as there was no application to build`
     - Configure AWS credentials
     - Log in to AWS ECR
     - Build and push App1 image
